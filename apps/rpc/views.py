@@ -198,7 +198,11 @@ def register_user(P, req):
         return UR.prepare_response({}, 1,"A user with this email already exists - please choose another email.")
     user= auth.getGuest(P["ckey"])
     P["ckey"] = annotations.register_user(user.id, P) #returns a new confkey.
-    p2 = {"tutorial_url": settings.GUEST_TUTORIAL_URL, "conf_url": "%s?ckey=%s" %("http://%s" % settings.NB_SERVERNAME, P["ckey"])}
+    p2 = {
+        "tutorial_url": settings.GUEST_TUTORIAL_URL,
+        "conf_url": "%s?ckey=%s" %("http://%s" % settings.NB_SERVERNAME, P["ckey"]),
+        "reset_url": "http://%s/password_reminder/" %(settings.NB_SERVERNAME)
+    }
     from django.core.mail import EmailMessage
     p2.update(P)
     msg = render_to_string("email/confirm_guest_registration",p2)
@@ -220,14 +224,14 @@ def login_user(P,req):
     user = auth.checkUser(email, password)
     if user is None:
         return UR.prepare_response({"ckey": None})
-    try: 
+    try:
         u_in = json.loads(urllib.unquote(req.COOKIES.userinfo)).ckey
         if u_in != user.confKey:
             #log that there's been an identity change
             auth.log_guest_login(u_in, user.id)
-    except: 
+    except:
         pass
-    user_dict = {"ckey": user.confkey, "email": user.email, 
+    user_dict = {"ckey": user.confkey, "email": user.email,
                  "firstname": user.firstname, "lastname": user.lastname,
                  "guest": user.guest, "valid": user.valid, "id": user.id}
     user_dict["userinfo"] = urllib.quote(json.dumps(user_dict))
@@ -310,7 +314,7 @@ def getHTML5Info(payload, req):
         "folders": {}
         }
     for r in ownerships:
-        if (r.ensemble.allow_guest or 
+        if (r.ensemble.allow_guest or
             auth.isMember(UR.getUserId(req),r.ensemble_id)):
             output["ensembles"][r.ensemble_id]=UR.model2dict(r,annotations.__NAMES["ensembles2"])
             output["files"][r.source_id]=UR.model2dict(r,annotations.__NAMES["files2"])
